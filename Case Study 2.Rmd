@@ -1,0 +1,75 @@
+---
+title: "Case Study 2"
+author: "Gabriel barbosa"
+date: "2023-06-28"
+output: html_document
+---
+## Introduction
+**Desired outcome of the case study.**
+In this case study we will look at the movies data set from MovieLens.
+It contains data about users and how they rate movies.
+The idea is to analyze the data set, make conjectures, support or refute those conjectures with data, and tell a story about the data!
+
+## Importing the Data
+```{r, echo=T, eval=F}
+movielens = 'https://raw.githubusercontent.com/dnchari/DS501_MovieLens/master/Results/unifiedMLDataMulti.csv'
+mlData = read.csv(movielens)
+```
+
+## Report some basic details of the data you collected. For example:**
+- How many ratings of 4.5 or over were given?
+```{r}
+#
+all_rating = mlData$rating
+
+#
+above_threshold = all_rating >= 4.5
+
+#
+rating = sum(above_threshold)
+
+#
+rating
+
+```
+- How many ratings of 4.5 or over were given by specifically men or women?
+```{r}
+#
+all_rating = table(mlData$rating >= 4.5, mlData$gender)
+
+#
+dimnames(all_rating) <- list(
+  Rating = c("Below 4.5", "Above or Equal to 4.5"),
+  Gender = c("Female", "Male")
+)
+
+#
+all_rating
+```
+- How many movies have an average rating over 4.5 overall?
+```{r}
+
+avg_rating = aggregate(rating ~ movie_title, data = mlData, FUN = mean)
+
+filtered_avg_rating <- avg_rating[avg_rating$rating >= 4.5, ]
+
+# Convert average ratings to formatted strings
+formatted_ratings <- sprintf("%.2f", filtered_avg_rating$rating)
+
+# Create the table with movie titles and average ratings
+table_data <- data.frame(movie_title = filtered_avg_rating$movie_title, average_rating = formatted_ratings)
+
+# Display the table
+print(table_data)
+
+```
+- How many movies have an average rating over 4.5 overall among only men and only women?
+```{r}
+
+```
+
+
+- How many movies have an median rating over 4.5 among men over age 30? How about women over age 30?
+- What are the ten most popular movies?
+    + Choose what you consider to be a reasonable definition of "popular".
+    + Be perpared to defend this choice.
