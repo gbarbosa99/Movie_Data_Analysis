@@ -1,9 +1,3 @@
----
-title: "Case Study 2"
-author: "Gabriel barbosa"
-date: "2023-06-28"
-output: html_document
----
 ## Introduction
 **Desired outcome of the case study.**
 In this case study we will look at the movies data set from MovieLens.
@@ -67,9 +61,3 @@ print(table_data)
 ```{r}
 
 ```
-
-
-- How many movies have an median rating over 4.5 among men over age 30? How about women over age 30?
-- What are the ten most popular movies?
-    + Choose what you consider to be a reasonable definition of "popular".
-    + Be perpared to defend this choice.
