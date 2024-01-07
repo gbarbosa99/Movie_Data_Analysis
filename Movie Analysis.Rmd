@@ -1,63 +1,670 @@
+---
+title: "Case Study 2"
+author: "Gabriel barbosa"
+date: "2023-06-28"
+output:
+  html_document: default
+  pdf_document: default
+---
 ## Introduction
 **Desired outcome of the case study.**
 In this case study we will look at the movies data set from MovieLens.
 It contains data about users and how they rate movies.
 The idea is to analyze the data set, make conjectures, support or refute those conjectures with data, and tell a story about the data!
 
-## Importing the Data
-```{r, echo=T, eval=F}
+## Report some basic details of the data you collected. For example:**
+How many ratings of 4.5 or over were given?
+```{r}
 movielens = 'https://raw.githubusercontent.com/dnchari/DS501_MovieLens/master/Results/unifiedMLDataMulti.csv'
 mlData = read.csv(movielens)
-```
 
-## Report some basic details of the data you collected. For example:**
-- How many ratings of 4.5 or over were given?
-```{r}
-#
+# Pulling only the column I need for this problem
 all_rating = mlData$rating
 
-#
+# Filter the rating column by all ratings above 4.5
 above_threshold = all_rating >= 4.5
 
-#
+# Count how many ratings are above 4.5
 rating = sum(above_threshold)
 
-#
-rating
+# Total number of ratings above 4.5
+cat("The total number of ratings above 4.5 is:", rating, "\n")
 
 ```
-- How many ratings of 4.5 or over were given by specifically men or women?
+How many ratings of 4.5 or over were given by specifically men or women?
 ```{r}
-#
+# Filter the dataset by the columns we need
 all_rating = table(mlData$rating >= 4.5, mlData$gender)
 
-#
-dimnames(all_rating) <- list(
+# Rename the dimensions to reflect the data
+dimnames(all_rating) = list(
   Rating = c("Below 4.5", "Above or Equal to 4.5"),
   Gender = c("Female", "Male")
 )
 
-#
+# Total number of ratings above and below 4.5 separated by gender
 all_rating
 ```
-- How many movies have an average rating over 4.5 overall?
-```{r}
 
+How many movies have an average rating over 4.5 overall?
+```{r}
+# Filter the data set by the columns we need and take the mean of the rating using the FUN function
 avg_rating = aggregate(rating ~ movie_title, data = mlData, FUN = mean)
 
-filtered_avg_rating <- avg_rating[avg_rating$rating >= 4.5, ]
+# Filter out any ratings below 4.5
+filtered_avg_rating = sum(avg_rating$rating > 4.5)
 
-# Convert average ratings to formatted strings
-formatted_ratings <- sprintf("%.2f", filtered_avg_rating$rating)
+# Display results in string format
+cat("The total number of movies with an average rating above 4.5 is: ", filtered_avg_rating, "\n")
+```
+How many movies have an average rating over 4.5 overall among only men and only women?
+```{r}
+# Separate our data by gender
+men_data = mlData[mlData$gender == 'M', ]
+women_data = mlData[mlData$gender == 'F', ]
 
-# Create the table with movie titles and average ratings
-table_data <- data.frame(movie_title = filtered_avg_rating$movie_title, average_rating = formatted_ratings)
+# Take the average of our movies by movie title for men and women separately
+men_avg_rating = aggregate(rating ~ movie_title, data = men_data, FUN = mean)
+women_avg_rating = aggregate(rating ~ movie_title, data = women_data, FUN = mean)
 
-# Display the table
-print(table_data)
+# Sum up the number of movies with an average rating above 4.5
+men_high_ratings_count = sum(men_avg_rating$rating >= 4.5)
+women_high_ratings_count= sum(women_avg_rating$rating >= 4.5)
+
+# Display results in string format
+cat("The total number of movies with an average rating of 4.5 or above among men is: ", men_high_ratings_count, "\n")
+cat("The total number of movies with an average rating of 4.5 or above among women is: ", women_high_ratings_count, "\n")
 
 ```
-- How many movies have an average rating over 4.5 overall among only men and only women?
+How many movies have a median rating over 4.5 among men over age 30? How about women over age 30?
+```{r}
+# Separate our data by gender and remove anybody 30 or younger
+men_data = mlData[mlData$gender == 'M' & mlData$age > 30, ]
+women_data = mlData[mlData$gender == 'F' & mlData$age > 30, ]
+
+# Take the median of our movies by movie title for men and women separately
+men_over_30_median = aggregate(rating ~ movie_title, data = men_data, FUN = median)
+women_over_30_median = aggregate(rating ~ movie_title, data = women_data, FUN = median)
+
+# Sum up the number of movies with a median over 4.5
+men_high_median = sum(men_over_30_median$rating > 4.5)
+women_high_median = sum(women_over_30_median$rating > 4.5)
+
+# Display results in string formet
+cat("The number of movies with a median rating over 4.5 among men over 30 is: ", men_high_median, "\n")
+cat("The number of movies with a median rating over 4.5 among women over 30 is: ", women_high_median, "\n")
+
+```
+What are the ten most popular movies? Defining popular as the 10 movies with the most 5 start ratings. 
+```{r}
+library(dplyr)
+
+# Count the number of ratings per movie
+rating_counts = table(mlData$movie_title)
+
+# Sort the rating counts in descending order
+sorted_counts = sort(rating_counts, decreasing = TRUE)
+
+# Filter movies with rating counts greater than 250
+filtered_movies = names(sorted_counts[sorted_counts > 250])
+
+# Filter the data frame by movies with rating counts greater than 250
+df_filtered = mlData[mlData$movie_title %in% filtered_movies, ]
+
+# Filter the ratings to include only ratings of 5
+filtered_ratings = df_filtered[df_filtered$rating == 5, ]
+
+# Calculate the total number of ratings of 5 for each movie
+# Sort by descending order of total ratings of 5
+rating_counts = filtered_ratings %>%
+  group_by(movie_title) %>%
+  summarize(total_ratings_5 = sum(rating == 5)) %>%
+  arrange(desc(total_ratings_5))
+
+# Select the top 5 movies with highest total ratings of 5
+top_5_movies = head(rating_counts, 5)
+
+# Print the top 5 movies
+print(top_5_movies)
+
+
+```
+
+## Problem 2: Expand our investigation to histograms
+
+Plot a histogram of the ratings of all movies
+```{r}
+library('ggplot2')
+
+hist(mlData$rating, breaks = seq(0, 5, by = 0.5), col = 'blue', xlab = 'Rating', ylab = 'Frequency', main = 'Histogram of Movie Ratings')
+```
+
+Plot a histogram for the number of ratings each movie received (With outliers):
+```{r}
+# Filter the data set by the columns we need
+data = mlData[, c("movie_title", "rating")]
+
+# Count the number of ratings per movie
+rating_counts = table(data$movie_title)
+
+# Create a histogram to visualize the distribution of rating counts
+hist(rating_counts,
+     xlab = "Number of Ratings",
+     ylab = "Frequency",
+     main = "Distribution of Rating Counts",
+     col = "navy"
+)
+
+```
+
+Plot a histogram for the number of ratings each movie received (Without outliers):
 ```{r}
 
+# Filter the data set by the columns we need
+data = mlData[, c("movie_title", "rating")]
+
+# Count the number of ratings per movie
+rating_counts = table(data$movie_title)
+
+# Define outlier fences based on the interquartile range (IQR)
+Q1 = quantile(rating_counts, 0.20)
+Q3 = quantile(rating_counts, 0.80)
+IQR = Q3 - Q1
+lower_fence = Q1 - 1.5 * IQR
+upper_fence = Q3 + 1.5 * IQR
+
+# Exclude outliers from rating counts
+filtered_rating_counts = rating_counts[rating_counts >= lower_fence & rating_counts <= upper_fence]
+
+# Create a histogram to visualize the distribution of rating counts without outliers
+hist(filtered_rating_counts,
+     xlab = "Number of Ratings",
+     ylab = "Frequency",
+     main = "Distribution of Rating Counts (Excluding Outliers)",
+     las = 1,
+     col = "navy"
+)
+
+
 ```
+
+Plot a histogram of the average rating for each movie.
+```{r}
+
+# Filter the data set by the columns we need
+data = mlData[, c("movie_title", "rating")]
+
+# Take the average of the movie ratings
+avg_rating = aggregate(rating ~ movie_title, data = data, FUN = mean)
+
+# Create a histogram to visualize the distribution of average ratings
+hist(avg_rating$rating,
+     xlab = "Average Rating",
+     ylab = "Frequency",
+     main = "Distribution of Average Ratings",
+     las = 1,
+     col = "navy"
+)
+
+```
+
+Plot a histogram of the average rating for movies which are rated more than 100 times.
+```{r}
+# Filter the data set by the columns we need
+data = mlData[, c("movie_title", "rating")]
+
+# Count the number of ratings per movie
+rating_counts = table(data$movie_title)
+
+# Filter movies with rating counts greater than 100
+filtered_movies = names(rating_counts[rating_counts > 100])
+
+# Filter the data frame by movies with rating counts greater than 100
+df_filtered = data[data$movie_title %in% filtered_movies, ]
+
+# Calculate the average rating for each movie
+avg_rating = aggregate(rating ~ movie_title, data = df_filtered, FUN = mean)
+
+# Create a histogram of the average rating for movies with rating counts > 100
+hist(avg_rating$rating,
+     xlab = "Average Rating",
+     ylab = "Frequency",
+     main = "Histogram of Average Rating (Movies with >100 Ratings)",
+     las = 1,
+     col = "navy"
+)
+
+```
+What do you observe about the tails of the histogram where you use all the movies versus the one where you only use movies rated more than 100 times?
+
+- Although the highest average rating of 5 and the lower ratings below have been removed, the data still seems to       clump between 3-4 and narrow down towards the edge of the histogram. Including all of the movies outline the effect   of the outliers in our data.
+  
+Which highly rated movies would you trust are actually good? Those rated more than 100 times or those rated less than 100 times?
+
+- I would prefer to watch a decently rated movie with a large sample size used to obtain that rating over a movie with a great rating and small sample size. By having a larger sample size, I believe there is more variation in the     movie preferences of the people, which represents the general public more accurately. Lowering the sample size means limiting the variation in preference and not representing the different opinions equally. 
+  
+Conjecture
+
+- I wanted to see if there was any correlation between the average rating of the movies and the age of the person rating the movie. The scatter plot shows that the older participants gave slightly higher ratings on average. 
+```{r}
+
+# Filter the data set by the columns we need
+data = mlData[, c("movie_title", "rating", "age")]
+
+# Calculate the average rating for each age category
+avg_rating = aggregate(rating ~ age, data = data, FUN = mean)
+
+# Fit a linear regression model
+lm_model = lm(rating ~ age, data = avg_rating)
+
+# Create a scatter plot of the average rating based on age
+plot(avg_rating$age, avg_rating$rating,
+     xlab = "Age",
+     ylab = "Average Rating",
+     main = "Average Rating by Age",
+     col = "navy",
+     pch = 16
+)
+
+# Add a line showing the trend
+abline(lm_model, col = "turquoise")
+
+```
+
+- I noticed that the occupation with the most votes was that of student with over 47000 votes. I want to dive deeper into this demographic.
+```{r}
+# Filter the data set by the columns we need
+data = mlData[, c("movie_title", "rating", "occupation")]
+
+# Calculate the total number of ratings for each occupation category
+rating_counts = table(data$occupation)
+rating_counts
+```
+
+- First, I want to see the movies the students gave the most 5 stars to.
+```{r}
+library(dplyr)
+
+# Filter the data set for students
+data = mlData[mlData$occupation == "student", ]
+
+# Filter the ratings to include only 5-star ratings
+filtered_ratings = data[data$rating == 5, ]
+
+# Calculate the total number of 5-star ratings per movie
+rating_counts = as.data.frame(table(filtered_ratings$movie_title))
+rating_counts = rating_counts[order(rating_counts$Freq, decreasing = TRUE), ]
+
+# Filter the rating_counts dataframe to only include the top 10 movies
+top_10_years = head(rating_counts, 10)
+
+# Print the total number of 5-star ratings per movie for the top 10 movies
+print(top_10_years)
+
+```
+
+- While looking at this list I noticed the year of the movie was included with the movie title within the movie_title column. What I'm going to do next is unlist the words within this column and use the numbers to separate the 5 star votes by year instead of by movie. 
+```{r}
+
+library(stringi)
+library(ggplot2)
+
+# Filter the data set for students
+data = mlData[mlData$occupation == "student", ]
+
+# Filter the ratings to include only 5-star ratings
+filtered_ratings = data[data$rating == 5, ]
+
+# Initialize an empty vector to store the extracted years
+years = c()
+
+# Loop through each movie_title
+for (title in filtered_ratings$movie_title) {
+  # Remove non-ASCII characters
+  cleaned_title = stri_trans_general(title, "Latin-ASCII")
+  
+  # Match the regular expression pattern
+  match = regexpr("\\(([0-9]{4})\\)", cleaned_title)
+  
+  # Check if there is a valid match
+  if (match > 0) {
+    # Extract the year from the matched substring
+    year = substr(cleaned_title, match + 1, match + 4)
+    
+    # Append the extracted year to the vector
+    years = c(years, year)
+  }
+}
+
+# Create a data frame with the year counts
+year_counts = as.data.frame(table(years))
+
+# Rename the columns for clarity
+colnames(year_counts) = c("Year", "Count")
+
+# Order the data frame by count in decreasing order
+year_counts = year_counts[order(year_counts$Count, decreasing = TRUE), ]
+
+# Filter the year_counts data frame to include only the last 10 years
+top_10_years = head(year_counts, 10)
+
+# Order the top 10 years by Count in decreasing order
+top_10_years = top_10_years[order(top_10_years$Count, decreasing = TRUE), ]
+
+# Create a bar graph of the last 10 years' ratings with vertical x-axis labels
+ggplot(top_10_years, aes(x = Year, y = Count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Year", y = "Total Ratings", title = "Total Ratings in the Top 10 Years") +
+  scale_x_discrete(limits = top_10_years$Year)
+
+
+
+
+```
+
+- Instead of taking the number of rating counts by movie I chose to separate it by year. I wanted to experiment with pulling apart the strings in the movie_title column and using the year to separate the movies.The year with the most 5-star ratings from the top 10 5-star only rated movies for students turned out be 1996. The movies this year must have been very good!
+
+## Problem 3: Correlation: Men versus women
+
+Make a scatter plot of men versus women and their mean rating for every movie.
+```{r}
+library(ggplot2)
+
+# Separate our data by gender
+men_data = mlData[mlData$gender == 'M', ]
+women_data = mlData[mlData$gender == 'F', ]
+
+# Take the average of our movies by movie title for men and women separately
+men_avg_rating = aggregate(rating ~ movie_title, data = men_data, FUN = mean)
+women_avg_rating = aggregate(rating ~ movie_title, data = women_data, FUN = mean)
+
+# Create a combined data frame with average ratings for men and women
+combined_avg_ratings = merge(men_avg_rating, women_avg_rating, by = "movie_title", suffixes = c("_men", "_women"))
+
+# Create the scatterplot
+ggplot(combined_avg_ratings, col = "navy", aes(x = rating_men, y = rating_women)) +
+  geom_point() +
+  labs(x = "Mean Rating - Men", y = "Mean Rating - Women", title = "Mean Ratings: Men vs Women") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red")  # Add diagonal line for reference
+
+```
+
+Make a scatter plot of men versus women and their mean rating for movies rated more than 200 times.
+```{r}
+library(ggplot2)
+
+# Separate our data by gender
+men_data = mlData[mlData$gender == 'M', ]
+women_data = mlData[mlData$gender == 'F', ]
+
+# Take the average of our movies by movie title for men and women separately
+men_avg_rating = aggregate(rating ~ movie_title, data = men_data, FUN = mean)
+women_avg_rating = aggregate(rating ~ movie_title, data = women_data, FUN = mean)
+
+# Create a combined data frame with average ratings for men and women
+combined_avg_ratings = merge(men_avg_rating, women_avg_rating, by = "movie_title", suffixes = c("_men", "_women"))
+
+# Filter movies with rating counts greater than 2000
+rating_counts = table(mlData$movie_title)
+filtered_movies = combined_avg_ratings[combined_avg_ratings$movie_title %in% names(rating_counts[rating_counts > 200]), ]
+
+# Create the scatterplot
+ggplot(filtered_movies, aes(x = rating_men, y = rating_women)) +
+  geom_point() +
+  labs(x = "Mean Rating - Men", y = "Mean Rating - Women", title = "Mean Ratings: Men vs Women") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red")  # Add diagonal line for reference
+
+
+```
+
+Compute the correlation coefficent between the ratings of men and women.
+```{r}
+library(ggplot2)
+
+# Separate our data by gender
+men_data = mlData[mlData$gender == 'M', ]
+women_data = mlData[mlData$gender == 'F', ]
+
+# Take the average of our movies by movie title for men and women separately
+men_avg_rating = aggregate(rating ~ movie_title, data = men_data, FUN = mean)
+women_avg_rating = aggregate(rating ~ movie_title, data = women_data, FUN = mean)
+
+# Create a combined data frame with average ratings for men and women
+combined_avg_ratings = merge(men_avg_rating, women_avg_rating, by = "movie_title", suffixes = c("_men", "_women"))
+
+# Filter movies with rating counts greater than 100
+rating_counts = table(mlData$movie_title)
+filtered_movies = combined_avg_ratings[combined_avg_ratings$movie_title %in% names(rating_counts[rating_counts > 100]), ]
+
+# Calculate the correlation coefficient
+correlation_coefficient = cor(filtered_movies$rating_men, filtered_movies$rating_women)
+
+# Create the scatterplot
+ggplot(filtered_movies, aes(x = rating_men, y = rating_women)) +
+  geom_point() +
+  labs(x = "Mean Rating - Men", y = "Mean Rating - Women", title = "Mean Ratings: Men vs Women") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +  # Add diagonal line for reference
+  annotate("text", x = max(filtered_movies$rating_men), y = min(filtered_movies$rating_women),
+           label = paste("Correlation:", round(correlation_coefficient, 2)), hjust = 1, vjust = -1)  # Add correlation coefficient label
+
+```
+
+What do you observe?
+
+- The correlation coefficient is positive, meaning the average rating for men and women go up together. There is also a relatively strong linear relationship between the two variables with a correlation of 0.79. 
+  
+Are the ratings similar or not? Support your answer with data!
+
+- Below we can see that the overall average rating for men and women are very close. I believe their ratings are similar to each other. 
+```{r}
+men_data = mlData[mlData$gender == 'M', ]
+women_data = mlData[mlData$gender == 'F', ]
+
+men_avg_rating = mean(men_data$rating)
+women_avg_rating = mean(women_data$rating)
+
+cat("The average rating for men is: ", men_avg_rating, "\n")
+cat("The average rating for women is: ", women_avg_rating, "\n")
+
+```
+
+Conjecture under what circumstances the rating given by one gender can be used to predict the rating given by the other gender.
+- I've divided the age column into three brackets. The first is below 20, the second is between 21-40, and the third is 41 and above. The average ratings for all 3 brackets are very close, with women in the first two brackets averaging higher ratings overall, but men over 40 rating higher overall. 
+```{r}
+
+men_data = mlData[mlData$gender == 'M', ]
+women_data = mlData[mlData$gender == 'F', ]
+
+# Create age brackets for men
+men_young_data = men_data[men_data$age < 20, ]
+men_mid_age_data = men_data[men_data$age >= 20 & men_data$age <= 40, ]
+men_older_data = men_data[men_data$age > 40, ]
+
+# Create age brackets for women
+women_young_data = women_data[women_data$age < 20, ]
+women_mid_age_data = women_data[women_data$age >= 20 & women_data$age <= 40, ]
+women_older_data = women_data[women_data$age > 40, ]
+
+# Calculate average ratings for each age bracket and gender
+men_young_avg_rating = mean(men_young_data$rating, na.rm = TRUE)
+men_mid_age_avg_rating = mean(men_mid_age_data$rating, na.rm = TRUE)
+men_older_avg_rating = mean(men_older_data$rating, na.rm = TRUE)
+
+women_young_avg_rating = mean(women_young_data$rating, na.rm = TRUE)
+women_mid_age_avg_rating = mean(women_mid_age_data$rating, na.rm = TRUE)
+women_older_avg_rating = mean(women_older_data$rating, na.rm = TRUE)
+
+# Print the results
+cat("Average rating for men younger than 20: ", men_young_avg_rating, "\n")
+cat("Average rating for men 21-40: ", men_mid_age_avg_rating, "\n")
+cat("Average rating for men 41 and up: ", men_older_avg_rating, "\n\n")
+
+cat("Average rating for women younger than 20: ", women_young_avg_rating, "\n")
+cat("Average rating for women 21-40: ", women_mid_age_avg_rating, "\n")
+cat("Average rating for women 41 and up: ", women_older_avg_rating, "\n")
+
+
+```
+
+- I wanted to dive a little deeper into these ratings and take a look at it by genre on top of all of the filters I applied above. 
+```{r}
+# Create age brackets for men
+men_young_data = men_data[men_data$age < 20, ]
+men_mid_age_data = men_data[men_data$age >= 20 & men_data$age <= 40, ]
+men_older_data = men_data[men_data$age > 40, ]
+
+# Create age brackets for women
+women_young_data = women_data[women_data$age < 20, ]
+women_mid_age_data = women_data[women_data$age >= 20 & women_data$age <= 40, ]
+women_older_data = women_data[women_data$age > 40, ]
+
+# Calculate average ratings by genre and age bracket for men
+men_young_avg_rating = aggregate(rating ~ genre, data = men_young_data, FUN = mean)
+men_mid_age_avg_rating = aggregate(rating ~ genre, data = men_mid_age_data, FUN = mean)
+men_older_avg_rating = aggregate(rating ~ genre, data = men_older_data, FUN = mean)
+
+# Calculate average ratings by genre and age bracket for women
+women_young_avg_rating = aggregate(rating ~ genre, data = women_young_data, FUN = mean)
+women_mid_age_avg_rating = aggregate(rating ~ genre, data = women_mid_age_data, FUN = mean)
+women_older_avg_rating = aggregate(rating ~ genre, data = women_older_data, FUN = mean)
+
+# Sort the average ratings in descending order
+men_young_avg_rating = men_young_avg_rating[order(-men_young_avg_rating$rating), ]
+men_mid_age_avg_rating = men_mid_age_avg_rating[order(-men_mid_age_avg_rating$rating), ]
+men_older_avg_rating = men_older_avg_rating[order(-men_older_avg_rating$rating), ]
+women_young_avg_rating = women_young_avg_rating[order(-women_young_avg_rating$rating), ]
+women_mid_age_avg_rating = women_mid_age_avg_rating[order(-women_mid_age_avg_rating$rating), ]
+women_older_avg_rating = women_older_avg_rating[order(-women_older_avg_rating$rating), ]
+
+# Group the results by the top 5 highest ratings for each age bracket
+men_young_top5 = men_young_avg_rating[1:5, ]
+men_mid_age_top5 = men_mid_age_avg_rating[1:5, ]
+men_older_top5 = men_older_avg_rating[1:5, ]
+women_young_top5 = women_young_avg_rating[1:5, ]
+women_mid_age_top5 = women_mid_age_avg_rating[1:5, ]
+women_older_top5 = women_older_avg_rating[1:5, ]
+
+# Print the results
+cat("Top 5 average ratings for men younger than 20 by genre:\n")
+print(men_young_top5)
+
+cat("\nTop 5 average ratings for men 21-40 by genre:\n")
+print(men_mid_age_top5)
+
+cat("\nTop 5 average ratings for men 41 and up by genre:\n")
+print(men_older_top5)
+
+cat("\nTop 5 average ratings for women younger than 20 by genre:\n")
+print(women_young_top5)
+
+cat("\nTop 5 average ratings for women 21-40 by genre:\n")
+print(women_mid_age_top5)
+
+cat("\nTop 5 average ratings for women 41 and up by genre:\n")
+print(women_older_top5)
+
+```
+The only genre that appears in the top 5 for all 6 age brackets is war, and it is in either first, second, or third place. I think it's fair to say that if the movie genre is war, regardless of gender, we can assume that the rating will be high. 
+
+Conjecture
+- I want to filter the average ratings by occupation to see if there are any trends there
+```{r}
+# Load the dplyr package
+library(dplyr)
+
+# Assuming your dataset is named 'movies'
+# Use the group_by() and summarise() functions to calculate the average rating for each occupation
+average_ratings = mlData %>%
+  group_by(occupation) %>%
+  summarise(average_rating = mean(rating, na.rm = TRUE)) %>%
+  arrange(desc(average_rating))
+
+# Print the resulting average ratings for each occupation
+print(average_ratings)
+
+```
+
+- Excluding the none category, the occupation with the highest average ratings seems to be the lawyers. The group with the lowest ratings are the healthcare workers. Healthcare is the only occupation with an average rating below 3. let's dive a little deeper into the healthcare data by separating all of the ratings of the healthcare workers by movie genre.
+```{r}
+
+healthcare_data = mlData[mlData$occupation == 'healthcare', ]
+rating_count = as.data.frame(table(healthcare_data$genre))
+
+# Calculate percentage
+rating_percentage = (rating_count$Freq / sum(rating_count$Freq)) * 100
+
+healthcare_avg_data = aggregate(rating ~ genre, data = healthcare_data, FUN = mean)
+
+# Create a combined table
+combined_table = cbind(rating_count, rating_percentage, healthcare_avg_data)
+
+# Sort the combined table in descending order based on count column
+combined_table = combined_table[order(combined_table$Freq, decreasing = TRUE), ]
+
+# Print the sorted combined table
+print(combined_table)
+
+# Set larger bottom margin to view labels 
+par(mar = c(8, 6, 4, 2) + 0.1)  
+par(mgp = c(5, 1, 0)) 
+
+# Create the bar plot
+barplot(combined_table$Freq, names.arg = combined_table$genre, 
+        xlab = "Genre", ylab = "Count", main = "Count of Genres in Healthcare Data", las = 2)
+
+# Reset the margins and mgp parameter to default
+par(mar = c(5, 4, 4, 2) + 0.1)  
+par(mgp = c(3, 1, 0))  
+
+
+```
+The first thing I notice here is that 4 genres make up over half of their ratings. Almost a quarter of their ratings are of drama movies, and this is one of their lowest scoring genres. 
+
+I'm assuming this is a trend for all occupations. Let's find out!
+```{r}
+
+rating_count = as.data.frame(table(mlData$genre))
+
+# Calculate percentage
+rating_percentage = (rating_count$Freq / sum(rating_count$Freq)) * 100
+
+healthcare_avg_data = aggregate(rating ~ genre, data = healthcare_data, FUN = mean)
+
+# Create a combined table
+combined_table = cbind(rating_count, rating_percentage, healthcare_avg_data)
+
+# Sort the combined table in descending order based on count column
+combined_table = combined_table[order(combined_table$Freq, decreasing = TRUE), ]
+
+# Print the sorted combined table
+print(combined_table)
+
+# Set larger bottom margin to view labels 
+par(mar = c(8, 6, 4, 2) + 0.1)  
+par(mgp = c(5, 1, 0)) 
+
+# Create the bar plot
+barplot(combined_table$Freq, names.arg = combined_table$genre, 
+        xlab = "Genre", ylab = "Count", main = "Count of Genres", las = 2)
+
+# Reset the margins and mgp parameter to default
+par(mar = c(5, 4, 4, 2) + 0.1)  
+par(mgp = c(3, 1, 0))
+
+```
+
+Just as I suspected! I don't think this data would be useful if we were concerned with the genre of the movie and not just the overall total movie average. Like with the question above about wanting a large sample size over a small size, I would want all genres to be equally represented as well. I wonder if the data would look the same if we had obtained an equal number of ratings for each genre.
+
+## Problem 4: Open Ended Question: Business Intelligence
+Do any of your conjectures in Problems 1, 2, and 3 provide insights that a movie company might be interested in?
+
+- I think the conclusion I came to about the war movie genre was interesting. It seems to be a favorite for everybody. This information could be used to determine what type of movie to put their money into for the highest value/return.
+  
+Propose a business question that you think this data can answer.
+
+- What movie from the 70s/80s/90s would perform best if we were to remake it? I'm sure Disney goes through a process like this to determine which of their classics they should remake. 
+  
+Suppose you are a Data Scientist at a movie company. Convince your boss that your conjecture is correct!
+
+- I believe my conjecture is correct because the correlation coefficient of the ratings was moderately high at 0.79. This proves that the data is linear.  
+
